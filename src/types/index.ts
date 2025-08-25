@@ -6,6 +6,13 @@ export type Participant = {
   rawScores?: string; // To hold the comma-separated string from input
   total: number;
   isAK: boolean;
+  team?: string;
+};
+
+export type RankedParticipant = Participant & {
+  rank: number;
+  bestScore: number;
+  secondBestScore: number;
 };
 
 export type PairingResult = {
@@ -14,7 +21,7 @@ export type PairingResult = {
   winner: "home" | "visiting" | "draw";
 };
 
-export type Results = {
+export type TeamResults = {
   homeTeamTotal: number;
   visitingTeamTotal: number;
   totalScoreWinner: "home" | "visiting" | "draw";
@@ -23,3 +30,5 @@ export type Results = {
   visitingPairingScore: number;
   pairingWinner: "home" | "visiting" | "draw";
 };
+
+export type CompetitionType = "team" | "individual";
