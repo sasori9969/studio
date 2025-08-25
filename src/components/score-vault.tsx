@@ -59,7 +59,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { exportToCsv, exportToPdf } from "@/lib/utils";
-import type { Participant, TeamResults, PairingResult, CompetitionType, RankedParticipant, CombinedTeam, CombinedParticipant, CombinedResults } from "@/types";
+import type { Participant, TeamResults, PairingResult, CompetitionType, RankedParticipant, CombinedTeam, CombinedParticipant, CombinedResults, CombinedSetupFormData } from "@/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -95,7 +95,6 @@ const combinedSetupSchema = z.object({
 
 type TeamSetupFormData = z.infer<typeof teamSetupSchema>;
 type IndividualSetupFormData = z.infer<typeof individualSetupSchema>;
-type CombinedSetupFormData = z.infer<typeof combinedSetupSchema>;
 
 
 export default function ScoreVault() {
@@ -202,10 +201,14 @@ export default function ScoreVault() {
       setIndividualParticipants(initialParticipants(3));
       setStep(1);
     } else if(type === 'combined') {
-       appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
-       appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
-       appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
-       appendCombinedTeam({ id: crypto.randomUUID(), name: "Team 1"});
+       if (combinedParticipantFields.length === 0) {
+          appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
+          appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
+          appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
+       }
+       if (combinedTeamFields.length === 0) {
+          appendCombinedTeam({ id: crypto.randomUUID(), name: "Team 1"});
+       }
        setStep(1);
     } else {
       setStep(1);
@@ -235,20 +238,38 @@ export default function ScoreVault() {
   };
 
   const handleCombinedSetupSubmit = (data: CombinedSetupFormData) => {
-    const initialTeamEntries: CombinedTeam[] = data.teams.map(team => ({
-        id: team.id,
-        name: team.name,
-        total: 0,
-        participants: Array.from({ length: 3 }, () => ({
-            participantId: '',
-            scores: [],
-            rawScores: "",
+    setCombinedEntries(prevEntries => {
+        // Keep existing teams and add new ones
+        const existingTeams = prevEntries.teams;
+        const newTeamData = data.teams.filter(t => !existingTeams.find(et => et.id === t.id));
+
+        const newTeams: CombinedTeam[] = newTeamData.map(team => ({
+            id: team.id,
+            name: team.name,
             total: 0,
-        }))
-    }));
-    setCombinedEntries({
-        individual: [],
-        teams: initialTeamEntries
+            participants: Array.from({ length: 3 }, () => ({
+                participantId: '',
+                scores: [],
+                rawScores: "",
+                total: 0,
+            }))
+        }));
+
+        // Filter out deleted teams but keep their data if they are re-added later (maybe not needed)
+        const updatedTeams = existingTeams
+            .filter(et => data.teams.some(t => t.id === et.id))
+            .map(et => ({ ...et, name: data.teams.find(t => t.id === et.id)!.name }));
+
+
+        // Remove individual entries for participants that no longer exist
+        const updatedIndividual = prevEntries.individual.filter(ind => 
+            data.participants.some(p => p.id === ind.participantId)
+        );
+
+        return {
+            teams: [...updatedTeams, ...newTeams],
+            individual: updatedIndividual
+        };
     });
     setStep(2);
   };
@@ -374,6 +395,7 @@ export default function ScoreVault() {
         // Collect all scores for each participant
         combinedEntries.individual.forEach(p => {
             const scores = parseScores(p);
+            if (!p.participantId) return;
             if (!allScoresByParticipant[p.participantId]) allScoresByParticipant[p.participantId] = [];
             allScoresByParticipant[p.participantId].push(...scores);
         });
@@ -787,7 +809,7 @@ export default function ScoreVault() {
                 {combinedEntries.teams.map((team, teamIndex) => (
                     <Card key={team.id} className="mb-6 shadow-md">
                         <CardHeader>
-                            <CardTitle>{combinedEventData.teams.find(t => t.id === team.id)?.name || `Team ${teamIndex + 1}`}</CardTitle>
+                            <CardTitle>{team.name}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {team.participants.map((p, pIndex) => (
