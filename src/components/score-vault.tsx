@@ -21,6 +21,7 @@ import {
   Trash2,
   UserPlus,
   Copy,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -1045,7 +1046,11 @@ export default function ScoreVault() {
                     )}
                     <Button onClick={() => setStep(2)} variant="secondary">
                         <Pencil />
-                        Daten bearbeiten
+                        Ergebnisse bearbeiten
+                    </Button>
+                     <Button onClick={() => setStep(1)} variant="secondary">
+                        <Settings />
+                        Setup bearbeiten
                     </Button>
                     <Button onClick={() => handleExport('csv')} variant="secondary">
                         <FileDown />
