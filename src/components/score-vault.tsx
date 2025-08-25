@@ -128,7 +128,7 @@ export default function ScoreVault() {
   } = useForm<IndividualSetupFormData>({
     resolver: zodResolver(individualSetupSchema),
     defaultValues: {
-      eventName: "Vereinsmeisterschaft",
+      eventName: "",
     },
   });
   const individualEventData = watchIndividualEvent();
@@ -142,7 +142,7 @@ export default function ScoreVault() {
   } = useForm<CombinedSetupFormData>({
       resolver: zodResolver(combinedSetupSchema),
       defaultValues: {
-          eventName: "Kombinierter Wettkampf",
+          eventName: "",
           participants: [],
           teams: [],
       },
