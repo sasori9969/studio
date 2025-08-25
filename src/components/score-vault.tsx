@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,6 +18,7 @@ import {
   User,
   Shield,
   PlusCircle,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,6 +133,38 @@ export default function ScoreVault() {
   ], [homeTeamParticipants, visitingTeamParticipants, teamEventData]);
 
 
+  // Save state to localStorage
+  useEffect(() => {
+    try {
+      const stateToSave = {
+        step,
+        competitionType,
+        teamEventData,
+        individualEventData,
+        homeTeamParticipants,
+        visitingTeamParticipants,
+        individualParticipants,
+        teamResults,
+        individualResults,
+        scoringMethod,
+      };
+      localStorage.setItem("scoreVaultState", JSON.stringify(stateToSave));
+    } catch (error) {
+      console.warn("Could not save state to local storage:", error);
+    }
+  }, [
+    step,
+    competitionType,
+    teamEventData,
+    individualEventData,
+    homeTeamParticipants,
+    visitingTeamParticipants,
+    individualParticipants,
+    teamResults,
+    individualResults,
+    scoringMethod,
+  ]);
+
   const handleCompetitionTypeSelect = (type: CompetitionType) => {
     setCompetitionType(type);
     if (type === 'individual') {
@@ -187,6 +220,10 @@ export default function ScoreVault() {
             isAK: false,
         }
     ]);
+  };
+
+  const deleteIndividualParticipant = (id: number) => {
+    setIndividualParticipants(prev => prev.filter(p => p.id !== id));
   };
 
 
@@ -346,10 +383,18 @@ export default function ScoreVault() {
   const resetApp = () => {
     setStep(0);
     setCompetitionType(null);
+    setHomeTeamParticipants([]);
+    setVisitingTeamParticipants([]);
+    setIndividualParticipants([]);
     setTeamResults(null);
     setIndividualResults(null);
     setAiSuggestion("");
-    // Reset forms maybe?
+    // Also clear localStorage for a full reset
+    try {
+        localStorage.removeItem("scoreVaultState");
+    } catch (error) {
+        console.warn("Could not clear state from local storage:", error);
+    }
   };
   
   const renderCompetitionTypeSelection = () => (
@@ -520,10 +565,13 @@ export default function ScoreVault() {
             <CardContent className="space-y-4">
                 {individualParticipants.map((p, index) => (
                     <div key={p.id}>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr_auto] gap-2 items-center">
                             <Input placeholder="Vorname" value={p.firstName} onChange={(e) => handleParticipantChange(p.id, 'firstName', e.target.value)} />
                             <Input placeholder="Nachname" value={p.lastName} onChange={(e) => handleParticipantChange(p.id, 'lastName', e.target.value)} />
                             <Input placeholder="Bis zu 10 Ergebnisse, mit Komma getrennt" value={p.rawScores} onChange={(e) => handleParticipantChange(p.id, 'rawScores', e.target.value)} />
+                             <Button variant="ghost" size="icon" onClick={() => deleteIndividualParticipant(p.id)} aria-label="Teilnehmer entfernen">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                         </div>
                         {index < individualParticipants.length - 1 && <Separator className="mt-4" />}
                     </div>
