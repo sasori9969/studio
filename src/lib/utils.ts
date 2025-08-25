@@ -56,7 +56,7 @@ export function exportToPdf({
   if (competitionType === 'team' && teamResults && homeTeamName && visitingTeamName && allParticipants) {
     doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text(`Team-Wettkampf: ${homeTeamName} vs. ${visitingTeamName}`, 14, 30);
+    doc.text(`Rundenkampf: ${homeTeamName} vs. ${visitingTeamName}`, 14, 30);
     
     autoTable(doc, {
       startY: 35,
@@ -88,7 +88,7 @@ export function exportToPdf({
   if (competitionType === 'individual' && individualResults) {
     doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text("Einzelwettkampf: Vereinsmeisterschaft", 14, 30);
+    doc.text("Einzelwettbewerb", 14, 30);
     
     const individualData = individualResults.map(p => [
         p.rank,
@@ -109,7 +109,7 @@ export function exportToPdf({
 
   if (competitionType === 'combined' && combinedResults && combinedEventData) {
     doc.setFontSize(12);
-    doc.text("Kombinierter Wettkampf - Teamwertung", 14, 30);
+    doc.text("Vereinsmeisterschaft - Teamwertung", 14, 30);
     
     const teamBody: any[] = [];
     combinedResults.teams.forEach((team, index) => {
@@ -134,7 +134,7 @@ export function exportToPdf({
       theme: 'grid',
       didDrawPage: (data) => {
         doc.setFontSize(12);
-        doc.text("Kombinierter Wettkampf - Einzelwertung", 14, data.cursor?.y ? data.cursor.y - 10 : 30);
+        doc.text("Vereinsmeisterschaft - Einzelwertung", 14, data.cursor?.y ? data.cursor.y - 10 : 30);
       }
     });
   }

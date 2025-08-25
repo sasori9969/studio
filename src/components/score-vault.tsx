@@ -483,7 +483,7 @@ export default function ScoreVault() {
         rows.push([]);
 
         if (competitionType === 'team' && teamResults) {
-            rows.push(["Wettkampftyp", "Team-Wettkampf"]);
+            rows.push(["Wettkampftyp", "Rundenkampf"]);
             rows.push(["Heimteam", teamEventData.homeTeamName]);
             rows.push(["Gastteam", teamEventData.visitingTeamName]);
             rows.push([]);
@@ -494,12 +494,12 @@ export default function ScoreVault() {
             rows.push(["Team", "Vorname", "Nachname", "AK", "Einzelergebnisse", "Gesamt"]);
             allTeamParticipants.forEach((p) => { rows.push([p.team || '', p.firstName, p.lastName, p.isAK ? "Ja" : "Nein", p.scores.join("; "), p.total]); });
         } else if (competitionType === 'individual' && individualResults) {
-            rows.push(["Wettkampftyp", "Vereinsmeisterschaft"]);
+            rows.push(["Wettkampftyp", "Einzelwettbewerb"]);
             rows.push([]);
             rows.push(['Rang', 'Vorname', 'Nachname', 'Bestes Ergebnis', 'Zweitbestes', 'Alle Ergebnisse']);
             individualResults.forEach(p => { rows.push([p.rank, p.firstName, p.lastName, p.bestScore, p.secondBestScore, p.scores.join('; ')]); });
         } else if (competitionType === 'combined' && combinedResults) {
-            rows.push(["Wettkampftyp", "Kombinierter Wettkampf"]);
+            rows.push(["Wettkampftyp", "Vereinsmeisterschaft"]);
             rows.push([]);
             rows.push(["--- TEAMWERTUNG ---"]);
             rows.push(["Rang", "Team", "Gesamt"]);
@@ -540,7 +540,7 @@ export default function ScoreVault() {
         <Card className="w-full max-w-2xl shadow-lg">
             <CardHeader>
               <CardTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-                <Trophy className="text-accent" /> ScoreVault
+                <Trophy className="text-accent" /> SSV Sulzbach Wettkampfsoftware
               </CardTitle>
               <CardDescription className="text-center">
                 Wettkampfauswertung leicht gemacht.
@@ -551,19 +551,19 @@ export default function ScoreVault() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center">
                 <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('team')}>
                     <Users className="h-8 w-8" />
-                    <span className="text-lg">Team-Wettkampf</span>
+                    <span className="text-lg">Rundenkampf</span>
                 </Button>
                 <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('individual')}>
                     <User className="h-8 w-8" />
-                    <span className="text-lg">Vereinsmeisterschaft</span>
+                    <span className="text-lg">Einzelwettbewerb</span>
                 </Button>
                 <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('combined')}>
                     <Copy className="h-8 w-8" />
-                    <span className="text-lg">Kombiniert</span>
+                    <span className="text-lg">Vereinsmeisterschaft</span>
                 </Button>
             </CardContent>
             <CardFooter>
-                <p className="text-xs text-muted-foreground text-center w-full">Wählen Sie 'Team' für Duelle, 'Vereinsmeisterschaft' für Einzelwertungen oder 'Kombiniert' für gemischte Wettkämpfe.</p>
+                <p className="text-xs text-muted-foreground text-center w-full">Wählen Sie 'Rundenkampf' für Duelle, 'Einzelwettbewerb' für reine Einzelwertungen oder 'Vereinsmeisterschaft' für gemischte Wettkämpfe.</p>
             </CardFooter>
         </Card>
     </div>
@@ -574,10 +574,10 @@ export default function ScoreVault() {
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-            <Users className="text-accent" /> Team-Wettkampf
+            <Users className="text-accent" /> Rundenkampf
           </CardTitle>
           <CardDescription className="text-center">
-            Event und Teams für den Mannschafts-Wettkampf konfigurieren.
+            Event und Teams für den Rundenkampf konfigurieren.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleTeamSubmit(handleTeamSetupSubmit)}>
@@ -623,7 +623,7 @@ export default function ScoreVault() {
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-            <User className="text-accent" /> Vereinsmeisterschaft
+            <User className="text-accent" /> Einzelwettbewerb
           </CardTitle>
           <CardDescription className="text-center">
             Namen des Events für den Einzel-Wettkampf festlegen.
@@ -651,7 +651,7 @@ export default function ScoreVault() {
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-            <Copy className="text-accent" /> Kombinierter Wettkampf
+            <Copy className="text-accent" /> Vereinsmeisterschaft
           </CardTitle>
           <CardDescription className="text-center">
             Legen Sie den Event-Namen fest und verwalten Sie Teilnehmer und Teams.
@@ -949,7 +949,7 @@ export default function ScoreVault() {
 
         {competitionType === 'team' && teamResults && (
             <Card className="shadow-lg">
-              <CardHeader><CardTitle>Endergebnis Team-Wettkampf</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Endergebnis Rundenkampf</CardTitle></CardHeader>
               <CardContent>
                 <Alert className="mb-6 bg-primary/10 border-primary/20">
                   <Trophy className="h-4 w-4 text-primary" />
@@ -984,7 +984,7 @@ export default function ScoreVault() {
 
         {competitionType === 'individual' && individualResults && (
             <Card className="shadow-lg">
-                <CardHeader><CardTitle>Ergebnis Vereinsmeisterschaft</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Ergebnis Einzelwettbewerb</CardTitle></CardHeader>
                 <CardContent>
                      <Table>
                         <TableHeader><TableRow><TableHead>Rang</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Bestes Ergebnis</TableHead><TableHead className="text-right">Zweitbestes</TableHead></TableRow></TableHeader>
@@ -1003,23 +1003,11 @@ export default function ScoreVault() {
                             <TableHeader><TableRow><TableHead>Rang</TableHead><TableHead>Team</TableHead><TableHead className="text-right">Gesamt</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {combinedResults.teams.map((team, index) => (
-                                    <React.Fragment key={team.id}>
-                                        <TableRow className="bg-muted/50">
-                                            <TableCell className="font-bold">{index + 1}</TableCell>
-                                            <TableCell className="font-semibold">{team.name}</TableCell>
-                                            <TableCell className="text-right font-bold">{team.total}</TableCell>
-                                        </TableRow>
-                                        {team.participants.map((p, pIndex) => {
-                                            const info = combinedEventData.participants.find(cp => cp.id === p.participantId);
-                                            return (
-                                                <TableRow key={pIndex} className="text-sm">
-                                                    <TableCell></TableCell>
-                                                    <TableCell className="pl-8">{info?.firstName} {info?.lastName}</TableCell>
-                                                    <TableCell className="text-right">{p.total}</TableCell>
-                                                </TableRow>
-                                            )
-                                        })}
-                                    </React.Fragment>
+                                    <TableRow key={team.id} className="bg-muted/50">
+                                        <TableCell className="font-bold">{index + 1}</TableCell>
+                                        <TableCell className="font-semibold">{team.name}</TableCell>
+                                        <TableCell className="text-right font-bold">{team.total}</TableCell>
+                                    </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
