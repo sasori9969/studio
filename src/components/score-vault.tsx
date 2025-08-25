@@ -17,6 +17,7 @@ import {
   FileText,
   User,
   Shield,
+  PlusCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +69,6 @@ const teamSetupSchema = z.object({
 
 const individualSetupSchema = z.object({
   eventName: z.string().min(1, "Event-Name ist erforderlich."),
-  participantsCount: z.number().min(1).max(50),
 });
 
 type TeamSetupFormData = z.infer<typeof teamSetupSchema>;
@@ -105,7 +105,6 @@ export default function ScoreVault() {
     resolver: zodResolver(individualSetupSchema),
     defaultValues: {
       eventName: "Vereinsmeisterschaft",
-      participantsCount: 5,
     },
   });
   const individualEventData = watchIndividualEvent();
@@ -135,7 +134,22 @@ export default function ScoreVault() {
 
   const handleCompetitionTypeSelect = (type: CompetitionType) => {
     setCompetitionType(type);
-    setStep(1);
+    if (type === 'individual') {
+      const initialParticipants = (count: number): Participant[] =>
+        Array.from({ length: count }, (_, i) => ({
+          id: i + 1,
+          firstName: "",
+          lastName: "",
+          scores: [],
+          rawScores: "",
+          total: 0,
+          isAK: false,
+        }));
+      setIndividualParticipants(initialParticipants(3));
+      setStep(1); // Go to simplified setup for event name
+    } else {
+      setStep(1);
+    }
   };
   
   const handleTeamSetupSubmit = (data: TeamSetupFormData) => {
@@ -157,18 +171,22 @@ export default function ScoreVault() {
   };
   
   const handleIndividualSetupSubmit = (data: IndividualSetupFormData) => {
-    const initialParticipants = (count: number): Participant[] =>
-      Array.from({ length: count }, (_, i) => ({
-        id: i + 1,
-        firstName: "",
-        lastName: "",
-        scores: [],
-        rawScores: "",
-        total: 0,
-        isAK: false,
-      }));
-    setIndividualParticipants(initialParticipants(data.participantsCount));
     setStep(2);
+  };
+
+  const addIndividualParticipant = () => {
+    setIndividualParticipants(prev => [
+        ...prev,
+        {
+            id: (prev.length > 0 ? Math.max(...prev.map(p => p.id)) : 0) + 1,
+            firstName: "",
+            lastName: "",
+            scores: [],
+            rawScores: "",
+            total: 0,
+            isAK: false,
+        }
+    ]);
   };
 
 
@@ -421,7 +439,7 @@ export default function ScoreVault() {
             <User className="text-accent" /> Vereinsmeisterschaft einrichten
           </CardTitle>
           <CardDescription className="text-center">
-            Event und Teilnehmerzahl für den Einzel-Wettkampf festlegen.
+            Namen des Events für den Einzel-Wettkampf festlegen.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleIndividualSubmit(handleIndividualSetupSubmit)}>
@@ -430,15 +448,6 @@ export default function ScoreVault() {
               <Label htmlFor="eventName">Event-Name</Label>
               <Controller name="eventName" control={individualControl} render={({ field }) => ( <Input id="eventName" placeholder="z.B. Vereinsmeisterschaft 2024" {...field} /> )}/>
               {individualErrors.eventName && <p className="text-sm text-destructive">{individualErrors.eventName.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="participantsCount">Anzahl der Teilnehmer</Label>
-               <Controller name="participantsCount" control={individualControl} render={({ field }) => (
-                   <Select onValueChange={(v) => field.onChange(Number(v))} defaultValue={String(field.value)}>
-                    <SelectTrigger id="participantsCount"><SelectValue /></SelectTrigger>
-                    <SelectContent>{Array.from({ length: 50 }, (_, i) => i + 1).map((num) => (<SelectItem key={num} value={String(num)}>{num} Teilnehmer</SelectItem>))}</SelectContent>
-                  </Select>
-                )}/>
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
@@ -519,6 +528,12 @@ export default function ScoreVault() {
                         {index < individualParticipants.length - 1 && <Separator className="mt-4" />}
                     </div>
                 ))}
+                <div className="mt-4 flex justify-center">
+                    <Button variant="outline" onClick={addIndividualParticipant}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Teilnehmer hinzufügen
+                    </Button>
+                </div>
             </CardContent>
         </Card>
         <div className="mt-8 flex justify-center">
