@@ -9,6 +9,7 @@ import {
   BrainCircuit,
   FileDown,
   Loader2,
+  Pencil,
   RotateCcw,
   Swords,
   Trophy,
@@ -529,6 +530,10 @@ export default function ScoreVault() {
                         {isAiLoading ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
                         {isAiLoading ? "Analysiere..." : "KI-Vorschlag für Wertung"}
                     </Button>
+                    <Button onClick={() => setStep(2)} variant="secondary">
+                        <Pencil />
+                        Daten bearbeiten
+                    </Button>
                     <Button onClick={handleExport} variant="secondary">
                         <FileDown />
                         Als CSV exportieren
@@ -553,3 +558,5 @@ export default function ScoreVault() {
     </div>
   );
 }
+
+    
