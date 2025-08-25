@@ -31,4 +31,42 @@ export type TeamResults = {
   pairingWinner: "home" | "visiting" | "draw";
 };
 
-export type CompetitionType = "team" | "individual";
+// --- Combined Competition Types ---
+
+export type CombinedParticipant = {
+  participantId: string; // references a participant from the main list
+  scores: number[];
+  rawScores: string;
+  total: number;
+};
+
+export type CombinedTeam = {
+  id: string; // id from setup
+  name: string;
+  participants: CombinedParticipant[];
+  total: number;
+};
+
+export type RankedCombinedIndividual = {
+    participantId: string;
+    firstName: string;
+    lastName: string;
+    rank: number;
+    bestScore: number;
+    secondBestScore: number;
+    allScores: number[];
+}
+
+export type CombinedResults = {
+  teams: CombinedTeam[];
+  individuals: RankedCombinedIndividual[];
+};
+
+export type CombinedSetupFormData = {
+    eventName: string;
+    participants: { id: string; firstName: string; lastName: string; }[];
+    teams: { id: string; name: string; }[];
+};
+
+
+export type CompetitionType = "team" | "individual" | "combined";
