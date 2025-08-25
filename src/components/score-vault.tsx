@@ -100,6 +100,11 @@ export default function ScoreVault() {
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
 
+  const allParticipants = useMemo(() => [
+    ...homeTeamParticipants.map(p => ({...p, team: eventData.homeTeamName})),
+    ...visitingTeamParticipants.map(p => ({...p, team: eventData.visitingTeamName}))
+  ], [homeTeamParticipants, visitingTeamParticipants, eventData]);
+
   const handleSetupSubmit = (data: SetupFormData) => {
     const participantsCount = data.participantsPerTeam;
     const initialParticipants = (count: number): Participant[] =>
@@ -253,12 +258,12 @@ export default function ScoreVault() {
       "Gesamt",
     ]);
 
-    const allParticipants = [
+    const allParticipantsForExport = [
       ...homeTeamParticipants.map((p) => ({ ...p, team: eventData.homeTeamName })),
       ...visitingTeamParticipants.map((p) => ({ ...p, team: eventData.visitingTeamName })),
     ];
 
-    allParticipants.forEach((p) => {
+    allParticipantsForExport.forEach((p) => {
       rows.push([
         p.team,
         p.firstName,
@@ -427,11 +432,6 @@ export default function ScoreVault() {
     const winnerByTotal = results.totalScoreWinner === 'home' ? eventData.homeTeamName : results.totalScoreWinner === 'visiting' ? eventData.visitingTeamName : 'Unentschieden';
     const winnerByPairs = results.pairingWinner === 'home' ? eventData.homeTeamName : results.pairingWinner === 'visiting' ? eventData.visitingTeamName : 'Unentschieden';
     
-    const allParticipants = useMemo(() => [
-      ...homeTeamParticipants.map(p => ({...p, team: eventData.homeTeamName})),
-      ...visitingTeamParticipants.map(p => ({...p, team: eventData.visitingTeamName}))
-    ], [homeTeamParticipants, visitingTeamParticipants, eventData]);
-
     return (
       <div className="space-y-8">
         <div className="text-center">
