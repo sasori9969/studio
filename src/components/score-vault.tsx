@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,6 +22,8 @@ import {
   UserPlus,
   Copy,
   Settings,
+  Upload,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,15 +100,18 @@ type IndividualSetupFormData = z.infer<typeof individualSetupSchema>;
 
 
 export default function ScoreVault() {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [step, setStep] = useState(0); // 0: type selection, 1: setup, 2: entry, 3: results
   const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Team Competition State
   const {
     control: teamControl,
     handleSubmit: handleTeamSubmit,
     watch: watchTeamEvent,
+    reset: resetTeamForm,
     formState: { errors: teamErrors },
   } = useForm<TeamSetupFormData>({
     resolver: zodResolver(teamSetupSchema),
@@ -124,6 +129,7 @@ export default function ScoreVault() {
     control: individualControl,
     handleSubmit: handleIndividualSubmit,
     watch: watchIndividualEvent,
+    reset: resetIndividualForm,
     formState: { errors: individualErrors },
   } = useForm<IndividualSetupFormData>({
     resolver: zodResolver(individualSetupSchema),
@@ -138,6 +144,7 @@ export default function ScoreVault() {
     control: combinedControl,
     handleSubmit: handleCombinedSubmit,
     watch: watchCombinedEvent,
+    reset: resetCombinedForm,
     formState: { errors: combinedErrors },
   } = useForm<CombinedSetupFormData>({
       resolver: zodResolver(combinedSetupSchema),
@@ -148,8 +155,8 @@ export default function ScoreVault() {
       },
   });
   const combinedEventData = watchCombinedEvent();
-  const { fields: combinedParticipantFields, append: appendCombinedParticipant, remove: removeCombinedParticipant } = useFieldArray({ control: combinedControl, name: "participants" });
-  const { fields: combinedTeamFields, append: appendCombinedTeam, remove: removeCombinedTeam } = useFieldArray({ control: combinedControl, name: "teams" });
+  const { fields: combinedParticipantFields, append: appendCombinedParticipant, remove: removeCombinedParticipant, replace: replaceCombinedParticipants } = useFieldArray({ control: combinedControl, name: "participants" });
+  const { fields: combinedTeamFields, append: appendCombinedTeam, remove: removeCombinedTeam, replace: replaceCombinedTeams } = useFieldArray({ control: combinedControl, name: "teams" });
   
   const [combinedEntries, setCombinedEntries] = useState<{
     individual: CombinedParticipant[];
@@ -184,6 +191,121 @@ export default function ScoreVault() {
     ...homeTeamParticipants.map(p => ({...p, team: teamEventData.homeTeamName})),
     ...visitingTeamParticipants.map(p => ({...p, team: teamEventData.visitingTeamName}))
   ], [homeTeamParticipants, visitingTeamParticipants, teamEventData]);
+
+  // --- SAVE & LOAD ---
+  const getAppState = () => ({
+      step,
+      competitionType,
+      teamEventData,
+      individualEventData,
+      combinedEventData,
+      homeTeamParticipants,
+      visitingTeamParticipants,
+      individualParticipants,
+      combinedEntries,
+      teamResults,
+      individualResults,
+      combinedResults,
+      scoringMethod
+  });
+
+  const loadAppState = (state: any) => {
+    setStep(state.step);
+    setCompetitionType(state.competitionType);
+    if(state.teamEventData) resetTeamForm(state.teamEventData);
+    if(state.individualEventData) resetIndividualForm(state.individualEventData);
+    if(state.combinedEventData) {
+        resetCombinedForm(state.combinedEventData);
+        // useFieldArray does not automatically repopulate, so we do it manually
+        replaceCombinedParticipants(state.combinedEventData.participants);
+        replaceCombinedTeams(state.combinedEventData.teams);
+    }
+    setHomeTeamParticipants(state.homeTeamParticipants || []);
+    setVisitingTeamParticipants(state.visitingTeamParticipants || []);
+    setIndividualParticipants(state.individualParticipants || []);
+    setCombinedEntries(state.combinedEntries || { individual: [], teams: [] });
+    setTeamResults(state.teamResults || null);
+    setIndividualResults(state.individualResults || null);
+    setCombinedResults(state.combinedResults || null);
+    setScoringMethod(state.scoringMethod || "total");
+    toast({ title: "Wettkampf geladen", description: "Der vorherige Wettkampfzustand wurde wiederhergestellt." });
+  };
+  
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save initial empty state
+    try {
+        const appState = getAppState();
+        localStorage.setItem("scoreVaultState", JSON.stringify(appState));
+    } catch (error) {
+        console.error("Fehler beim Speichern im Local Storage:", error);
+    }
+  }, [
+      step, competitionType, teamEventData, individualEventData, combinedEventData, 
+      homeTeamParticipants, visitingTeamParticipants, individualParticipants, combinedEntries, 
+      teamResults, individualResults, combinedResults, isLoaded
+  ]);
+
+  // Load from localStorage on initial render
+  useEffect(() => {
+    try {
+        const savedState = localStorage.getItem("scoreVaultState");
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            // Basic validation
+            if (parsedState && typeof parsedState.step === 'number') {
+                loadAppState(parsedState);
+            }
+        }
+    } catch (error) {
+        console.error("Fehler beim Laden aus dem Local Storage:", error);
+        localStorage.removeItem("scoreVaultState");
+    }
+    setIsLoaded(true);
+  }, []);
+
+  const handleSaveToFile = () => {
+    try {
+        const appState = getAppState();
+        const fileContent = JSON.stringify(appState, null, 2);
+        const blob = new Blob([fileContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const filename = eventData.eventName ? `${eventData.eventName.replace(/\s+/g, '_')}.json` : 'wettkampf.json';
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "Wettkampf gespeichert", description: `Die Datei ${filename} wurde heruntergeladen.` });
+    } catch (error) {
+        console.error("Fehler beim Speichern der Datei:", error);
+        toast({ title: "Speicherfehler", description: "Der Wettkampf konnte nicht als Datei gespeichert werden.", variant: "destructive" });
+    }
+  };
+
+  const handleLoadFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = e.target?.result;
+            if (typeof text !== 'string') throw new Error("Konnte Datei nicht lesen.");
+            const parsedState = JSON.parse(text);
+            loadAppState(parsedState);
+        } catch (error) {
+            console.error("Fehler beim Laden der Datei:", error);
+            toast({ title: "Ladefehler", description: "Die Datei scheint beschädigt oder in einem falschen Format zu sein.", variant: "destructive" });
+        }
+    };
+    reader.readAsText(file);
+    // Reset file input to allow loading the same file again
+    if(fileInputRef.current) fileInputRef.current.value = "";
+  };
+
 
   const handleCompetitionTypeSelect = (type: CompetitionType) => {
     setCompetitionType(type);
@@ -525,6 +647,11 @@ export default function ScoreVault() {
   const resetApp = () => {
     setStep(0);
     setCompetitionType(null);
+    resetTeamForm({ eventName: "", homeTeamName: "Heimteam", visitingTeamName: "Gastteam", participantsPerTeam: 3 });
+    resetIndividualForm({ eventName: "" });
+    resetCombinedForm({ eventName: "", participants: [], teams: [] });
+    replaceCombinedParticipants([]);
+    replaceCombinedTeams([]);
     setHomeTeamParticipants([]);
     setVisitingTeamParticipants([]);
     setIndividualParticipants([]);
@@ -533,6 +660,8 @@ export default function ScoreVault() {
     setIndividualResults(null);
     setCombinedResults(null);
     setAiSuggestion("");
+    localStorage.removeItem("scoreVaultState");
+    toast({ title: "Neuer Wettkampf", description: "Alle Daten wurden zurückgesetzt." });
   };
   
   const renderCompetitionTypeSelection = () => (
@@ -545,7 +674,7 @@ export default function ScoreVault() {
               <CardDescription className="text-center">
                 Wettkampfauswertung leicht gemacht.
                 <br />
-                Bitte wählen Sie den Wettkampftyp.
+                Bitte wählen Sie den Wettkampftyp oder laden Sie einen bestehenden Wettkampf.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center">
@@ -562,8 +691,12 @@ export default function ScoreVault() {
                     <span className="text-lg">Vereinsmeisterschaft</span>
                 </Button>
             </CardContent>
-            <CardFooter>
-                <p className="text-xs text-muted-foreground text-center w-full">Wählen Sie 'Rundenkampf' für Duelle, 'Einzelwettbewerb' für reine Einzelwertungen oder 'Vereinsmeisterschaft' für gemischte Wettkämpfe.</p>
+            <CardFooter className="flex-col gap-4">
+                 <Button variant="secondary" className="w-full" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="mr-2" /> Wettkampf laden
+                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleLoadFromFile} accept=".json" className="hidden" />
+                <p className="text-xs text-muted-foreground text-center w-full pt-2">Wählen Sie einen Typ, um einen neuen Wettkampf zu starten, oder laden Sie eine gespeicherte `.json`-Datei.</p>
             </CardFooter>
         </Card>
     </div>
@@ -1061,6 +1194,10 @@ export default function ScoreVault() {
                      <Button onClick={() => setStep(1)} variant="secondary">
                         <Settings />
                         Setup bearbeiten
+                    </Button>
+                    <Button onClick={handleSaveToFile} variant="secondary">
+                        <Save />
+                        Wettkampf speichern
                     </Button>
                     <Button onClick={() => handleExport('csv')} variant="secondary">
                         <FileDown />
