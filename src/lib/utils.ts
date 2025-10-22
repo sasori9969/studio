@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 import type { TeamResults, RankedParticipant, Participant, CombinedResults, CombinedSetupFormData } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(...inputs))
 }
 
 export function exportToCsv(filename: string, rows: (string | number)[][]) {
@@ -155,7 +155,7 @@ export function exportToPdf({
     const individualTableStartY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(12);
     doc.text("Vereinsmeisterschaft - Einzelwertung", 14, individualTableStartY - 5);
-
+    
     autoTable(doc, {
       startY: individualTableStartY,
       head: [['Rang', 'Name', 'Bestes Ergebnis', 'Zweitbestes']],
