@@ -489,10 +489,16 @@ export default function ScoreVault() {
                 };
             })
             .sort((a, b) => {
-                if (b.bestScore !== a.bestScore) {
-                    return b.bestScore - a.bestScore;
+                const aScores = [...a.scores].sort((x, y) => y - x);
+                const bScores = [...b.scores].sort((x, y) => y - x);
+                for (let i = 0; i < Math.max(aScores.length, bScores.length); i++) {
+                    const scoreA = aScores[i] || 0;
+                    const scoreB = bScores[i] || 0;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
                 }
-                return b.secondBestScore - a.secondBestScore;
+                return 0;
             })
             .map((p, index) => ({
                 ...p,
@@ -1120,8 +1126,29 @@ export default function ScoreVault() {
                 <CardHeader><CardTitle>Ergebnis Einzelwettbewerb</CardTitle></CardHeader>
                 <CardContent>
                      <Table>
-                        <TableHeader><TableRow><TableHead>Rang</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Bestes Ergebnis</TableHead><TableHead className="text-right">Zweitbestes</TableHead></TableRow></TableHeader>
-                        <TableBody>{individualResults.map(p => (<TableRow key={p.id}><TableCell className="font-bold">{p.rank}</TableCell><TableCell>{p.firstName} {p.lastName}</TableCell><TableCell className="text-right font-medium">{p.bestScore}</TableCell><TableCell className="text-right">{p.secondBestScore}</TableCell></TableRow>))}</TableBody>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Rang</TableHead>
+                                <TableHead>Name</TableHead>
+                                {Array.from({ length: 10 }, (_, i) => (
+                                    <TableHead key={i} className="text-right">{i + 1}</TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {individualResults.map(p => {
+                                const sortedScores = [...p.scores].sort((a, b) => b - a);
+                                return (
+                                    <TableRow key={p.id}>
+                                        <TableCell className="font-bold">{p.rank}</TableCell>
+                                        <TableCell>{p.firstName} {p.lastName}</TableCell>
+                                        {Array.from({ length: 10 }, (_, i) => (
+                                            <TableCell key={i} className="text-right font-medium">{sortedScores[i] || ''}</TableCell>
+                                        ))}
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
                     </Table>
                 </CardContent>
             </Card>
