@@ -2,8 +2,8 @@ export type Participant = {
   id: number;
   firstName: string;
   lastName: string;
-  scores: number[];
-  rawScores?: string; // To hold the comma-separated string from input
+  scores: number[]; 
+  rawScores: string; // To hold the comma-separated string from input
   total: number;
   isAK: boolean;
   team?: string;
