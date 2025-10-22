@@ -53,7 +53,7 @@ export function exportToPdf({
   const pageWidth = doc.internal.pageSize.getWidth();
   doc.setFontSize(18);
   doc.text(eventName, pageWidth / 2, 22, { align: 'center' });
-
+  
   if (competitionType === 'team' && teamResults && homeTeamName && visitingTeamName && allParticipants) {
     doc.setFontSize(11);
     doc.setTextColor(100);
@@ -69,7 +69,7 @@ export function exportToPdf({
       theme: 'striped',
     });
 
-    const participantData = allParticipants.map(p => [
+    const participantData = allParticipants.sort((a, b) => (a.isAK ? 1 : 0) - (b.isAK ? 1 : 0) || a.id - b.id).map(p => [
       p.team || '',
       p.firstName,
       p.lastName,
