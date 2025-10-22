@@ -110,18 +110,23 @@ export function exportToPdf({
     doc.setTextColor(100);
     doc.text("Einzelwettbewerb", 14, 30);
     
-    const individualData = individualResults.map(p => [
+    const individualData = individualResults.map(p => {
+      const allScores = [...p.scores].sort((a, b) => b - a);
+      const scoresToDisplay = allScores.slice(0, 10);
+      while (scoresToDisplay.length < 10) {
+        scoresToDisplay.push('');
+      }
+      return [
         p.rank,
         p.firstName,
         p.lastName,
-        p.bestScore,
-        p.secondBestScore,
-        p.scores.join('; ')
-    ]);
+        ...scoresToDisplay
+      ];
+    });
     
     autoTable(doc, {
         startY: 35,
-        head: [['Rang', 'Vorname', 'Nachname', 'Bestes Ergebnis', 'Zweitbestes', 'Alle Ergebnisse']],
+        head: [['Rang', 'Vorname', 'Nachname', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.']],
         body: individualData,
         theme: 'grid',
     });
