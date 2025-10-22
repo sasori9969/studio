@@ -128,15 +128,15 @@ export function exportToPdf({
         theme: 'striped',
     });
 
+    const individualTableStartY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(12);
+    doc.text("Vereinsmeisterschaft - Einzelwertung", 14, individualTableStartY - 5);
+
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 15,
+      startY: individualTableStartY,
       head: [['Rang', 'Name', 'Bestes Ergebnis', 'Zweitbestes']],
       body: combinedResults.individuals.map(p => [p.rank, `${p.firstName} ${p.lastName}`, p.bestScore, p.secondBestScore]),
       theme: 'grid',
-      didDrawPage: (data) => {
-        doc.setFontSize(12);
-        doc.text("Vereinsmeisterschaft - Einzelwertung", 14, data.cursor?.y ? data.cursor.y - 10 : 30);
-      }
     });
   }
 
