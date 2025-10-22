@@ -50,8 +50,9 @@ export function exportToPdf({
 }: ExportPdfParams) {
   const doc = new jsPDF();
   
+  const pageWidth = doc.internal.pageSize.getWidth();
   doc.setFontSize(18);
-  doc.text(eventName, 14, 22);
+  doc.text(eventName, pageWidth / 2, 22, { align: 'center' });
 
   if (competitionType === 'team' && teamResults && homeTeamName && visitingTeamName && allParticipants) {
     doc.setFontSize(11);
