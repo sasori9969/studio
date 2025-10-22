@@ -126,7 +126,7 @@ export function exportToPdf({
     
     autoTable(doc, {
         startY: 35,
-        head: [['Rang', 'Vorname', 'Nachname', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.']],
+        head: [['Rang', 'Vorname', 'Nachname', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
         body: individualData,
         theme: 'grid',
     });
