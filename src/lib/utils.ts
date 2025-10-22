@@ -112,7 +112,7 @@ export function exportToPdf({
     
     const individualData = individualResults.map(p => {
       const allScores = [...p.scores].sort((a, b) => b - a);
-      const scoresToDisplay = allScores.slice(0, 10);
+      const scoresToDisplay: (number | string)[] = allScores.slice(0, 10);
       while (scoresToDisplay.length < 10) {
         scoresToDisplay.push('');
       }
