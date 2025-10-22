@@ -101,6 +101,7 @@ export function exportToPdf({
       startY: (doc as any).lastAutoTable.finalY + 15,
       head: [['Team', 'Vorname', 'Nachname', 'AK', 'Einzelergebnisse', 'Gesamt']],
       body: participantData,
+      columnStyles: { 5: { halign: 'center' } },
       theme: 'grid',
     });
   }
@@ -128,6 +129,18 @@ export function exportToPdf({
         startY: 35,
         head: [['Rang', 'Vorname', 'Nachname', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
         body: individualData,
+        columnStyles: {
+            0: { halign: 'center' },
+            3: { halign: 'center' },
+            4: { halign: 'center' },
+            5: { halign: 'center' },
+            6: { halign: 'center' },
+            7: { halign: 'center' },
+            8: { halign: 'center' },
+            9: { halign: 'center' },
+            10: { halign: 'center' },
+            11: { halign: 'center' },
+        },
         theme: 'grid',
     });
   }
@@ -138,10 +151,10 @@ export function exportToPdf({
     
     const teamBody: any[] = [];
     combinedResults.teams.forEach((team, index) => {
-        teamBody.push([{ content: `${index + 1}. ${team.name}`, colSpan: 2, styles: { fontStyle: 'bold' } }, { content: team.total, styles: { halign: 'right', fontStyle: 'bold' } } ]);
+        teamBody.push([{ content: `${index + 1}. ${team.name}`, colSpan: 2, styles: { fontStyle: 'bold' } }, { content: team.total, styles: { halign: 'center', fontStyle: 'bold' } } ]);
         team.participants.forEach(p => {
              const info = combinedEventData.participants.find(cp => cp.id === p.participantId);
-             teamBody.push(['', `${info?.firstName} ${info?.lastName}`, { content: p.total, styles: { halign: 'right' }}]);
+             teamBody.push(['', `${info?.firstName} ${info?.lastName}`, { content: p.total, styles: { halign: 'center' }}]);
         });
     });
 
@@ -160,6 +173,11 @@ export function exportToPdf({
       startY: individualTableStartY,
       head: [['Rang', 'Name', 'Bestes Ergebnis', 'Zweitbestes']],
       body: combinedResults.individuals.map(p => [p.rank, `${p.firstName} ${p.lastName}`, p.bestScore, p.secondBestScore]),
+      columnStyles: {
+          0: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+      },
       theme: 'grid',
     });
   }
