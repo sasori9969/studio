@@ -69,6 +69,25 @@ export function exportToPdf({
       theme: 'striped',
     });
 
+    const pairingBody = teamResults.pairingResults.map((p, index) => [
+      `${homeTeamName} ${index + 1}`,
+      `${p.homeParticipant.firstName} ${p.homeParticipant.lastName}`,
+      p.homeParticipant.total,
+      p.visitingParticipant.total,
+      `${p.visitingParticipant.firstName} ${p.visitingParticipant.lastName}`,
+      `${visitingTeamName} ${index + 1}`,
+    ]);
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Heim', 'Schütze', 'Erg.', 'Erg.', 'Schütze', 'Gast']],
+      body: pairingBody,
+      theme: 'grid',
+      headStyles: { halign: 'center' },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'center' } },
+    });
+
+
     const participantData = allParticipants.sort((a, b) => (a.isAK ? 1 : 0) - (b.isAK ? 1 : 0) || a.id - b.id).map(p => [
       p.team || '',
       p.firstName,
@@ -79,7 +98,7 @@ export function exportToPdf({
     ]);
 
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 10,
+      startY: (doc as any).lastAutoTable.finalY + 15,
       head: [['Team', 'Vorname', 'Nachname', 'AK', 'Einzelergebnisse', 'Gesamt']],
       body: participantData,
       theme: 'grid',
