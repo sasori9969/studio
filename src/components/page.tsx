@@ -157,4 +157,5 @@ export default function AktivCupPage() {
         </CardContent>
       </Card>
     </div>
-
+  );
+}
