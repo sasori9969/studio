@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, getDay, getDate, isSameDay } from "date-fns";
+import { de } from "date-fns/locale";
 import {
   ArrowRight,
   BrainCircuit,
@@ -12,6 +14,8 @@ import {
   FileDown,
   Loader2,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
   RotateCcw,
   Swords,
   Trophy,
@@ -83,6 +87,10 @@ const individualSetupSchema = z.object({
   eventName: z.string().min(1, "Event-Name ist erforderlich."),
 });
 
+const aktivCupSetupSchema = z.object({
+    eventName: z.string().min(1, "Event-Name ist erforderlich."),
+});
+
 const combinedSetupSchema = z.object({
     eventName: z.string().min(1, "Event-Name ist erforderlich."),
     participants: z.array(z.object({
@@ -98,12 +106,20 @@ const combinedSetupSchema = z.object({
 
 type TeamSetupFormData = z.infer<typeof teamSetupSchema>;
 type IndividualSetupFormData = z.infer<typeof individualSetupSchema>;
+type AktivCupSetupFormData = z.infer<typeof aktivCupSetupSchema>;
+
+interface AktivCupParticipant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  attendedDates: string[]; // Store dates as ISO strings 'YYYY-MM-DD'
+}
 
 
 export default function ScoreVault() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [step, setStep] = useState(0); // 0: type selection, 1: setup, 2: entry, 3: results
-  const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
+  const [competitionType, setCompetitionType] = useState<CompetitionType | "aktiv_cup" | null>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,6 +156,21 @@ export default function ScoreVault() {
   });
   const individualEventData = watchIndividualEvent();
 
+  // Aktiv-Cup State
+  const {
+    control: aktivCupControl,
+    handleSubmit: handleAktivCupSubmit,
+    watch: watchAktivCupEvent,
+    reset: resetAktivCupForm,
+    formState: { errors: aktivCupErrors },
+  } = useForm<AktivCupSetupFormData>({
+    resolver: zodResolver(aktivCupSetupSchema),
+    defaultValues: {
+      eventName: "Aktiv-Cup",
+    },
+  });
+  const aktivCupEventData = watchAktivCupEvent();
+
   // Combined Competition State
   const {
     control: combinedControl,
@@ -169,10 +200,11 @@ export default function ScoreVault() {
     switch(competitionType) {
         case 'team': return teamEventData;
         case 'individual': return individualEventData;
+        case 'aktiv_cup': return aktivCupEventData;
         case 'combined': return combinedEventData;
         default: return { eventName: "" };
     }
-  }, [competitionType, teamEventData, individualEventData, combinedEventData]);
+  }, [competitionType, teamEventData, individualEventData, combinedEventData, aktivCupEventData]);
 
 
   // Entry Step State
@@ -180,9 +212,15 @@ export default function ScoreVault() {
   const [visitingTeamParticipants, setVisitingTeamParticipants] = useState<Participant[]>([]);
   const [individualParticipants, setIndividualParticipants] = useState<Participant[]>([]);
 
+  // Aktiv-Cup Entry State
+  const [aktivCupParticipants, setAktivCupParticipants] = useState<AktivCupParticipant[]>([]);
+  const [selectedAktivCupParticipantId, setSelectedAktivCupParticipantId] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
   // Results Step State
   const [teamResults, setTeamResults] = useState<TeamResults | null>(null);
   const [individualResults, setIndividualResults] = useState<RankedParticipant[] | null>(null);
+  const [aktivCupResults, setAktivCupResults] = useState<AktivCupParticipant[] | null>(null);
   const [combinedResults, setCombinedResults] = useState<CombinedResults | null>(null);
   const [scoringMethod, setScoringMethod] = useState<"total" | "pairs">("total");
   const [aiSuggestion, setAiSuggestion] = useState("");
@@ -199,12 +237,16 @@ export default function ScoreVault() {
       competitionType,
       teamEventData,
       individualEventData,
+      aktivCupEventData,
       combinedEventData,
       homeTeamParticipants,
       visitingTeamParticipants,
       individualParticipants,
+      aktivCupParticipants,
+      selectedAktivCupParticipantId,
       combinedEntries,
       teamResults,
+      aktivCupResults,
       individualResults,
       combinedResults,
       scoringMethod
@@ -215,6 +257,7 @@ export default function ScoreVault() {
     setCompetitionType(state.competitionType);
     if(state.teamEventData) resetTeamForm(state.teamEventData);
     if(state.individualEventData) resetIndividualForm(state.individualEventData);
+    if(state.aktivCupEventData) resetAktivCupForm(state.aktivCupEventData);
     if(state.combinedEventData) {
         resetCombinedForm(state.combinedEventData);
         // useFieldArray does not automatically repopulate, so we do it manually
@@ -224,8 +267,11 @@ export default function ScoreVault() {
     setHomeTeamParticipants(state.homeTeamParticipants || []);
     setVisitingTeamParticipants(state.visitingTeamParticipants || []);
     setIndividualParticipants(state.individualParticipants || []);
+    setAktivCupParticipants(state.aktivCupParticipants || []);
+    setSelectedAktivCupParticipantId(state.selectedAktivCupParticipantId || null);
     setCombinedEntries(state.combinedEntries || { individual: [], teams: [] });
     setTeamResults(state.teamResults || null);
+    setAktivCupResults(state.aktivCupResults || null);
     setIndividualResults(state.individualResults || null);
     setCombinedResults(state.combinedResults || null);
     setScoringMethod(state.scoringMethod || "total");
@@ -241,10 +287,10 @@ export default function ScoreVault() {
     } catch (error) {
         console.error("Fehler beim Speichern im Local Storage:", error);
     }
-  }, [
-      step, competitionType, teamEventData, individualEventData, combinedEventData, 
-      homeTeamParticipants, visitingTeamParticipants, individualParticipants, combinedEntries, 
-      teamResults, individualResults, combinedResults, isLoaded
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+      step, competitionType, teamEventData, individualEventData, combinedEventData, aktivCupEventData,
+      homeTeamParticipants, visitingTeamParticipants, individualParticipants, aktivCupParticipants, combinedEntries,
+      teamResults, individualResults, combinedResults, aktivCupResults, isLoaded, selectedAktivCupParticipantId
   ]);
 
   // Load from localStorage on initial render
@@ -308,7 +354,7 @@ export default function ScoreVault() {
   };
 
 
-  const handleCompetitionTypeSelect = (type: CompetitionType) => {
+  const handleCompetitionTypeSelect = (type: CompetitionType | "aktiv_cup") => {
     setCompetitionType(type);
     if (type === 'individual') {
       const initialParticipants = (count: number): Participant[] =>
@@ -323,6 +369,15 @@ export default function ScoreVault() {
         }));
       setIndividualParticipants(initialParticipants(3));
       setStep(1);
+    } else if (type === 'aktiv_cup') {
+        if (aktivCupParticipants.length === 0) {
+            setAktivCupParticipants([
+                { id: crypto.randomUUID(), firstName: "", lastName: "", attendedDates: [] },
+                { id: crypto.randomUUID(), firstName: "", lastName: "", attendedDates: [] },
+            ]);
+        }
+        setStep(1);
+        return;
     } else if(type === 'combined') {
        if (combinedParticipantFields.length === 0) {
           appendCombinedParticipant({ id: crypto.randomUUID(), firstName: "", lastName: "" });
@@ -358,6 +413,10 @@ export default function ScoreVault() {
   
   const handleIndividualSetupSubmit = (_data: IndividualSetupFormData) => {
     setStep(2);
+  };
+
+  const handleAktivCupSetupSubmit = (_data: AktivCupSetupFormData) => {
+      setStep(2);
   };
 
   const handleCombinedSetupSubmit = (data: CombinedSetupFormData) => {
@@ -507,6 +566,13 @@ export default function ScoreVault() {
             }));
         setIndividualResults(ranked);
         setIndividualParticipants(participantsWithScores);
+    } else if (competitionType === 'aktiv_cup') {
+        const sortedParticipants = [...aktivCupParticipants].sort((a, b) => {
+            const aCount = a.attendedDates.length;
+            const bCount = b.attendedDates.length;
+            return bCount - aCount;
+        });
+        setAktivCupResults(sortedParticipants);
     } else if (competitionType === 'combined') {
         // Calculate team results
         const updatedTeams = combinedEntries.teams.map(team => {
@@ -586,6 +652,7 @@ export default function ScoreVault() {
   const handleExport = (format: 'csv' | 'pdf') => {
     if ((competitionType === 'team' && !teamResults) ||
         (competitionType === 'individual' && !individualResults) ||
+        (competitionType === 'aktiv_cup' && !aktivCupResults) ||
         (competitionType === 'combined' && !combinedResults)) {
       toast({ title: "Fehler", description: "Keine Ergebnisdaten zum Exportieren vorhanden.", variant: "destructive" });
       return;
@@ -593,9 +660,10 @@ export default function ScoreVault() {
 
     const exportData = {
         eventName: eventData.eventName,
-        competitionType: competitionType!,
+        competitionType: (competitionType === 'aktiv_cup' ? 'activ-cup' : competitionType) as 'team' | 'individual' | 'combined' | 'activ-cup',
         teamResults,
         individualResults,
+        aktivCupResults,
         combinedResults,
         homeTeamName: competitionType === 'team' ? teamEventData.homeTeamName : undefined,
         visitingTeamName: competitionType === 'team' ? teamEventData.visitingTeamName : undefined,
@@ -627,6 +695,11 @@ export default function ScoreVault() {
             rows.push([]);
             rows.push(['Rang', 'Vorname', 'Nachname', 'Bestes Ergebnis', 'Zweitbestes', 'Alle Ergebnisse']);
             individualResults.forEach(p => { rows.push([p.rank, p.firstName, p.lastName, p.bestScore, p.secondBestScore, p.scores.join('; ')]); });
+        } else if (competitionType === 'aktiv_cup' && aktivCupResults) {
+            rows.push(["Wettkampftyp", "Aktiv-Cup"]);
+            rows.push([]);
+            rows.push(['Rang', 'Vorname', 'Nachname', 'Anwesenheiten']);
+            aktivCupResults.forEach((p, index) => { rows.push([index + 1, p.firstName, p.lastName, p.attendedDates.length]); });
         } else if (competitionType === 'combined' && combinedResults) {
             rows.push(["Wettkampftyp", "Vereinsmeisterschaft"]);
             rows.push([]);
@@ -656,12 +729,15 @@ export default function ScoreVault() {
     setCompetitionType(null);
     resetTeamForm({ eventName: "", homeTeamName: "Heimteam", visitingTeamName: "Gastteam", participantsPerTeam: 3 });
     resetIndividualForm({ eventName: "" });
+    resetAktivCupForm({ eventName: "Aktiv-Cup" });
     resetCombinedForm({ eventName: "", participants: [], teams: [] });
     replaceCombinedParticipants([]);
     replaceCombinedTeams([]);
     setHomeTeamParticipants([]);
     setVisitingTeamParticipants([]);
     setIndividualParticipants([]);
+    setAktivCupParticipants([]);
+    setSelectedAktivCupParticipantId(null);
     setCombinedEntries({ individual: [], teams: [] });
     setTeamResults(null);
     setIndividualResults(null);
@@ -697,15 +773,9 @@ export default function ScoreVault() {
                     <Copy className="h-8 w-8" />
                     <span className="text-lg">Vereinsmeisterschaft</span>
                 </Button>
-                <Button asChild variant="outline" className="h-24 w-full flex flex-col gap-2 md:col-span-2">
-                    <Link
-                        href="/aktiv-cup"
-                        className="h-24 w-full flex flex-col gap-2"
-                        onClick={() => handleCompetitionTypeSelect('team')}
-                    >
-                        <Shield className="h-8 w-8" />
-                        <span className="text-lg">Aktiv-Cup</span>
-                    </Link>
+                <Button variant="outline" className="h-24 w-full flex flex-col gap-2 md:col-span-2" onClick={() => handleCompetitionTypeSelect('aktiv_cup')}>
+                    <Shield className="h-8 w-8" />
+                    <span className="text-lg">Aktiv-Cup</span>
                 </Button>
             </CardContent>
             <CardFooter className="flex-col gap-4">
@@ -793,6 +863,34 @@ export default function ScoreVault() {
           </CardFooter>
         </form>
       </Card>
+    </div>
+  );
+
+  const renderAktivCupSetupStep = () => (
+    <div className="flex flex-col items-center">
+        <Card className="w-full max-w-2xl shadow-lg">
+            <CardHeader>
+                <CardTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
+                    <Shield className="text-accent" /> Aktiv-Cup
+                </CardTitle>
+                <CardDescription className="text-center">
+                    Namen des Events für den Aktiv-Cup festlegen.
+                </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleAktivCupSubmit(handleAktivCupSetupSubmit)}>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="eventName">Event-Name</Label>
+                        <Controller name="eventName" control={aktivCupControl} render={({ field }) => ( <Input id="eventName" placeholder="z.B. Aktiv-Cup 2024" {...field} /> )}/>
+                        {aktivCupErrors.eventName && <p className="text-sm text-destructive">{aktivCupErrors.eventName.message}</p>}
+                    </div>
+                </CardContent>
+                <CardFooter className="flex-col gap-4">
+                    <Button type="submit" className="w-full">Weiter zur Erfassung <ArrowRight /></Button>
+                    <Button variant="link" onClick={() => setStep(0)}>Zurück zur Auswahl</Button>
+                </CardFooter>
+            </form>
+        </Card>
     </div>
   );
 
@@ -945,6 +1043,85 @@ export default function ScoreVault() {
     </div>
   );
 
+  const renderAktivCupEntryStep = () => {
+    const selectedParticipant = aktivCupParticipants.find(p => p.id === selectedAktivCupParticipantId);
+
+    const trainingDays = useMemo(() => {
+        const days: Date[] = [];
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const date = new Date(year, month, 1);
+        while (date.getMonth() === month) {
+            const dayOfWeek = getDay(date); // 0=So, 1=Mo, ..., 3=Mi, ..., 6=Sa
+            if (dayOfWeek === 3 || dayOfWeek === 6 || dayOfWeek === 0) { // Mi, Sa, So
+                days.push(new Date(date));
+            }
+            date.setDate(date.getDate() + 1);
+        }
+        return days;
+    }, [currentMonth]);
+
+    const handleDateToggle = (date: Date) => {
+        if (!selectedAktivCupParticipantId) {
+          toast({ title: "Achtung", description: "Bitte wählen Sie zuerst einen Teilnehmer aus.", variant: "default" });
+          return;
+        }
+        const dateString = date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        setAktivCupParticipants(prev =>
+          prev.map(p => {
+            if (p.id === selectedAktivCupParticipantId) {
+              const attended = p.attendedDates.includes(dateString);
+              const newDates = attended
+                ? p.attendedDates.filter(d => d !== dateString)
+                : [...p.attendedDates, dateString];
+              return { ...p, attendedDates: newDates };
+            }
+            return p;
+          })
+        );
+    };
+
+    return (
+        <div>
+            <h1 className="text-3xl font-bold mb-2 text-center">{aktivCupEventData.eventName}</h1>
+            <p className="text-muted-foreground text-center mb-8">Teilnehmer verwalten und Anwesenheit erfassen.</p>
+            <div className="grid md:grid-cols-2 gap-8">
+                <Card className="shadow-md">
+                    <CardHeader><CardTitle>Teilnehmer</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        {aktivCupParticipants.map(p => (
+                            <div key={p.id} onClick={() => setSelectedAktivCupParticipantId(p.id)} className={cn("flex justify-between items-center p-2 rounded-md cursor-pointer border", selectedAktivCupParticipantId === p.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50")}>
+                                <div className="flex-grow grid grid-cols-2 gap-2">
+                                    <Input value={p.firstName} onChange={(e) => { e.stopPropagation(); setAktivCupParticipants(ps => ps.map(part => part.id === p.id ? {...part, firstName: e.target.value} : part))}} placeholder="Vorname" className="border-none bg-transparent h-auto p-0 focus-visible:ring-0"/>
+                                    <Input value={p.lastName} onChange={(e) => { e.stopPropagation(); setAktivCupParticipants(ps => ps.map(part => part.id === p.id ? {...part, lastName: e.target.value} : part))}} placeholder="Nachname" className="border-none bg-transparent h-auto p-0 focus-visible:ring-0"/>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setAktivCupParticipants(ps => ps.filter(part => part.id !== p.id)); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                        ))}
+                         <Button variant="outline" className="w-full mt-2" onClick={() => setAktivCupParticipants(prev => [...prev, { id: crypto.randomUUID(), firstName: "", lastName: "", attendedDates: [] }])}><UserPlus className="mr-2 h-4 w-4" /> Teilnehmer hinzufügen</Button>
+                    </CardContent>
+                </Card>
+                <Card className="shadow-md">
+                    <CardHeader>
+                        <CardTitle>Anwesenheit für: <span className="text-primary">{selectedParticipant?.firstName || '...'}</span></CardTitle>
+                        <div className="flex items-center justify-between pt-2">
+                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                            <span className="text-lg font-semibold">{format(currentMonth, "MMMM yyyy", { locale: de })}</span>
+                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                        {trainingDays.map(day => (<Button key={day.toISOString()} variant={selectedParticipant?.attendedDates.some(d => isSameDay(new Date(d), day)) ? "default" : "outline"} onClick={() => handleDateToggle(day)} className="flex flex-col h-16" disabled={!selectedAktivCupParticipantId}><span className="text-xs">{format(day, "E", { locale: de })}</span><span className="text-lg font-bold">{getDate(day)}</span></Button>))}
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="mt-8 flex justify-center">
+                <Button onClick={calculateResults} size="lg">Ergebnisse berechnen <Trophy /></Button>
+            </div>
+        </div>
+    );
+  }
+
   const renderCombinedEntryStep = () => (
     <div>
       <h1 className="text-3xl font-bold mb-2 text-center">{combinedEventData.eventName}</h1>
@@ -1081,6 +1258,7 @@ export default function ScoreVault() {
   const renderResultsStep = () => {
     if ((competitionType === 'team' && !teamResults) ||
         (competitionType === 'individual' && !individualResults) ||
+        (competitionType === 'aktiv_cup' && !aktivCupResults) ||
         (competitionType === 'combined' && !combinedResults)) return null;
 
 
@@ -1159,6 +1337,26 @@ export default function ScoreVault() {
                                     </TableRow>
                                 );
                             })}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        )}
+
+        {competitionType === 'aktiv_cup' && aktivCupResults && (
+            <Card className="shadow-lg">
+                <CardHeader><CardTitle>Ergebnis Aktiv-Cup</CardTitle></CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Rang</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Anwesenheiten</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {aktivCupResults.map((p, index) => (
+                                <TableRow key={p.id}>
+                                    <TableCell className="font-bold">{index + 1}</TableCell>
+                                    <TableCell>{p.firstName} {p.lastName}</TableCell>
+                                    <TableCell className="text-right font-medium">{p.attendedDates.length}</TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -1263,11 +1461,13 @@ export default function ScoreVault() {
       case 1:
         if (competitionType === 'team') return renderTeamSetupStep();
         if (competitionType === 'individual') return renderIndividualSetupStep();
+        if (competitionType === 'aktiv_cup') return renderAktivCupSetupStep();
         if (competitionType === 'combined') return renderCombinedSetupStep();
         return null;
       case 2:
         if (competitionType === 'team') return renderTeamParticipantEntryStep();
         if (competitionType === 'individual') return renderIndividualParticipantEntryStep();
+        if (competitionType === 'aktiv_cup') return renderAktivCupEntryStep();
         if (competitionType === 'combined') return renderCombinedEntryStep();
         return null;
       case 3: return renderResultsStep();
