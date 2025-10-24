@@ -8,6 +8,7 @@ import * as z from "zod";
 import {
   ArrowRight,
   BrainCircuit,
+  Copy,
   FileDown,
   Loader2,
   Pencil,
@@ -16,15 +17,14 @@ import {
   Trophy,
   Users,
   FileText,
+  Save,
+  Settings,
   User,
+  UserPlus,
   Shield,
   PlusCircle,
   Trash2,
-  UserPlus,
-  Copy,
-  Settings,
   Upload,
-  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -693,12 +693,16 @@ export default function ScoreVault() {
                     <User className="h-8 w-8" />
                     <span className="text-lg">Einzelwettbewerb</span>
                 </Button>
-                <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('combined')}>
+                <Button variant="outline" className="h-24 w-full flex flex-col gap-2 md:col-span-2" onClick={() => handleCompetitionTypeSelect('combined')}>
                     <Copy className="h-8 w-8" />
                     <span className="text-lg">Vereinsmeisterschaft</span>
                 </Button>
-                <Button variant="outline" className="h-24 w-full flex flex-col gap-2" asChild>
-                    <Link href="/aktiv-cup">
+                <Button asChild variant="outline" className="h-24 w-full flex flex-col gap-2 md:col-span-2">
+                    <Link
+                        href="/aktiv-cup"
+                        className="h-24 w-full flex flex-col gap-2"
+                        onClick={() => handleCompetitionTypeSelect('team')}
+                    >
                         <Shield className="h-8 w-8" />
                         <span className="text-lg">Aktiv-Cup</span>
                     </Link>
