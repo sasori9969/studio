@@ -9,7 +9,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function exportToCsv(filename: string, rows: (string | number)[][]) {
-  if (typeof window === "undefined") return;
   
   const csvContent = "data:text/csv;charset=utf-8," 
     + rows.map(e => e.join(",")).join("\n");
@@ -25,15 +24,17 @@ export function exportToCsv(filename: string, rows: (string | number)[][]) {
 
 interface ExportPdfParams {
   eventName: string;
-  competitionType: 'team' | 'individual' | 'combined';
+  competitionType: 'team' | 'individual' | 'combined' | 'activ-cup';
   teamResults?: TeamResults | null;
   individualResults?: RankedParticipant[] | null;
   combinedResults?: CombinedResults | null;
+  activCupResults?: Record<string, { participantId: string; name: string; total: number; rank: number }[]> | null;
   homeTeamName?: string;
   visitingTeamName?: string;
   allParticipants?: Participant[];
   allIndividualParticipants?: Participant[];
   combinedEventData?: CombinedSetupFormData;
+  activCupEventData?: { ranges: { id: string; name: string }[] };
 }
 
 export function exportToPdf({
@@ -42,11 +43,13 @@ export function exportToPdf({
   teamResults,
   individualResults,
   combinedResults,
+  activCupResults,
   homeTeamName,
   visitingTeamName,
   allParticipants,
   allIndividualParticipants,
-  combinedEventData
+  combinedEventData,
+  activCupEventData,
 }: ExportPdfParams) {
   const doc = new jsPDF();
   
@@ -180,6 +183,72 @@ export function exportToPdf({
       },
       theme: 'grid',
     });
+  }
+
+  if (competitionType === 'combined' && combinedResults && combinedEventData) {
+    doc.setFontSize(12);
+    doc.text("Vereinsmeisterschaft - Teamwertung", 14, 30);
+    
+    const teamBody: any[] = [];
+    combinedResults.teams.forEach((team, index) => {
+        teamBody.push([{ content: `${index + 1}. ${team.name}`, colSpan: 2, styles: { fontStyle: 'bold' } }, { content: team.total, styles: { halign: 'center', fontStyle: 'bold' } } ]);
+        team.participants.forEach(p => {
+             const info = combinedEventData.participants.find(cp => cp.id === p.participantId);
+             teamBody.push(['', `${info?.firstName} ${info?.lastName}`, { content: p.total, styles: { halign: 'center' }}]);
+        });
+    });
+
+    autoTable(doc, {
+        startY: 35,
+        head: [['Rang/Team', 'Teilnehmer', 'Ergebnis']],
+        body: teamBody,
+        theme: 'striped',
+    });
+
+    const individualTableStartY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(12);
+    doc.text("Vereinsmeisterschaft - Einzelwertung", 14, individualTableStartY - 5);
+    
+    autoTable(doc, {
+      startY: individualTableStartY,
+      head: [['Rang', 'Name', 'Bestes Ergebnis', 'Zweitbestes']],
+      body: combinedResults.individuals.map(p => [p.rank, `${p.firstName} ${p.lastName}`, p.bestScore, p.secondBestScore]),
+      columnStyles: {
+          0: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+      },
+      theme: 'grid',
+    });
+  }
+
+  if (competitionType === 'activ-cup' && activCupResults && activCupEventData) {
+    let startY = 30;
+    for (const rangeId in activCupResults) {
+      const range = activCupEventData.ranges.find(r => r.id === rangeId);
+      if (!range) continue;
+
+      const results = activCupResults[rangeId];
+      if (!results || results.length === 0) continue;
+
+      if (startY > 30) {
+        startY = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      doc.setFontSize(12);
+      doc.text(`Activ Cup - Wertung ${range.name}`, 14, startY);
+
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [['Rang', 'Name', 'Gesamtpunkte']],
+        body: results.map(p => [p.rank, p.name, p.total]),
+        columnStyles: {
+            0: { halign: 'center' },
+            2: { halign: 'center' },
+        },
+        theme: 'grid',
+      });
+    }
   }
 
   doc.save(`${eventName.replace(/\s+/g, "_")}_Ergebnisse.pdf`);

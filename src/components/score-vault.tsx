@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -683,7 +684,7 @@ export default function ScoreVault() {
                 Bitte wählen Sie den Wettkampftyp oder laden Sie einen bestehenden Wettkampf.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center">
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 justify-center">
                 <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('team')}>
                     <Users className="h-8 w-8" />
                     <span className="text-lg">Rundenkampf</span>
@@ -695,6 +696,12 @@ export default function ScoreVault() {
                 <Button variant="outline" className="h-24 w-full flex flex-col gap-2" onClick={() => handleCompetitionTypeSelect('combined')}>
                     <Copy className="h-8 w-8" />
                     <span className="text-lg">Vereinsmeisterschaft</span>
+                </Button>
+                <Button variant="outline" className="h-24 w-full flex flex-col gap-2" asChild>
+                    <Link href="/aktiv-cup">
+                        <Shield className="h-8 w-8" />
+                        <span className="text-lg">Aktiv-Cup</span>
+                    </Link>
                 </Button>
             </CardContent>
             <CardFooter className="flex-col gap-4">
